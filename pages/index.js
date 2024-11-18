@@ -1,47 +1,55 @@
-import Head from 'next/head'
-import Product from '../components/Product'
-import prisma from '../lib/prisma'
+import { useState } from 'react';
 
-export default function Home({ products }) {
+export default function Chat() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+
+    const userMessage = { role: 'user', content: input };
+    setMessages((prev) => [...prev, userMessage]);
+
+    setInput('');
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: input }),
+      });
+
+      const data = await response.json();
+
+      const botMessage = { role: 'bot', content: data.reply };
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
   return (
-    <div>
-      <Head>
-        <title> Next.js and Azure Database for MySQL Quickstart</title>
-        <meta name="description" content="Next.js and Azure Database for MySQL Quickstart" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
-      <main className="p-10 mx-auto max-w-4xl">
-        <h1 className="text-6xl font-bold mb-4 text-center">Next.js and Azure Database for MySQL Quickstart</h1>
-        <p className="mb-20 text-xl text-center">
-          🔥 Shop from the hottest items in the world 🔥
-        </p>
-        <div className="grid md:grid-cols-3 sm:grid-cols-2 grid-cols-1 justify-items-center  gap-4">
-          {products.map((product) => (
-            <Product product={product} key={product.id} />
-          ))}
-        </div>
-      </main>
-
-      <footer>         
-      </footer>
+    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+      <h1>Azure OpenAI Chat App</h1>
+      <div style={{ border: '1px solid #ccc', padding: '10px', minHeight: '300px' }}>
+        {messages.map((msg, index) => (
+          <div key={index} style={{ margin: '10px 0' }}>
+            <strong>{msg.role === 'user' ? 'You: ' : 'Bot: '}</strong>
+            <span>{msg.content}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: '10px' }}>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          style={{ width: '80%', padding: '10px' }}
+        />
+        <button onClick={sendMessage} style={{ padding: '10px', marginLeft: '10px' }}>
+          Send
+        </button>
+      </div>
     </div>
-  )
-}
-
-export async function getStaticProps(context) {
-  const data = await prisma.product.findMany({
-    include: {
-      category: true,
-    },
-  })
-
-  //convert decimal value to string to pass through as json
-  const products = data.map((product) => ({
-    ...product,
-    price: product.price.toString(),
-  }))
-  return {
-    props: { products },
-  }
+  );
 }
